@@ -1,5 +1,10 @@
 const express = require("express")
 const app = express()
+app.use(express.json());
+
+const cors = require("cors");
+
+
 
 const multer = require("multer");
 // const pdfReader = require("pdfreader");
@@ -12,17 +17,27 @@ const upload = multer({ dest: "uploads/" });
 
 const port = 3000
 
-app.post('createReceipts', (req, res) => {
+app.post('/generateReceipt', (req, res) => {
     // Create a new receipt
 
-    // get the data from the client
+    // get the data in JSON format
     req = req.body;
 
     // get current date GMT +8 in YYYYMMDD format
     const date = new Date();
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
+    const year = date.getFullYear().toString();
+    
+    var month = (date.getMonth() + 1).toString();
+    // add a zero in front of the month if the month is less than 10
+    if (month < 10) {
+      month = "0" + month
+    }
+    
+    var day = date.getDate().toString();
+    // add a zero in front of the day if the day is less than 10
+    if (day < 10) {
+      day = "0" + day
+    }
     
     const currentDate = year + month + day;
     
@@ -46,11 +61,11 @@ app.post('createReceipts', (req, res) => {
     const sequenceNumber = unixTimestamp.toString().slice(-8);
 
     // refId format YYYYMMDDBBBBBBBBXXXOCCSSSSSSSS
-    const refId = currentDate + bicCode + transactionType + originator + channelCode + sequenceNumber;
+    const refId = currentDate.toString() + bicCode + transactionType + originator + channelCode + sequenceNumber;
 
-    const status = "";
+    var status = "";
 
-    if (req.transactionType == "instant") {
+    if (req.transactionType == "Instant") {
         status = "success";
     } else {
         status = "pending";
@@ -63,29 +78,17 @@ app.post('createReceipts', (req, res) => {
       ref1: req.ref1,
       ref2: req.ref2,
       transactionType: req.transactionType,
-      receipientName: req.receipientName,
-      receipientNoAcc: req.receipientNoAcc,
-      receipientBank: req.receipientBank,
-      senderNoAcc: req.senderNoAcc,
+      senderNoAccount: req.senderNoAccount,
+      receiverNoAccount: req.receiverNoAccount,
+      receiverName: req.receiverName,
+      receipientBank: "ABC BANK",
       status: status,
     };
 
+    res.header("Access-Control-Allow-Origin", "http://localhost:5173");
+
     // Return the new receipt
     res.status(200).json({ receipt });
-    
-
-    // const receipt = {
-    //     referenceId: req.referenceId,
-    //     date: req.date,
-    //     amount: req.amount,
-    //     ref1: req.ref1,
-    //     ref2: req.ref2,
-    //     transactionType: req.transactionType,
-    //     status: req.status,
-    //     comment: req.comment,
-    //     receiptImage: req.receiptImage
-    // }
-    // Return the new receipt
 })
 
 const data = {
@@ -192,7 +195,7 @@ app.post("/upload", upload.single("pdf"), async (req, res) => {
     res.status(500).json({ error: "Failed to import the pdfreader library" });
   }
 });
-
+app.use(cors());
 app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`)
+  console.log(`Example app listening on http://localhost:${port}`)
 })
