@@ -23,12 +23,13 @@ export default {
   },
   methods: {
     save() {
-      // axios.post("http://127.0.0.1:8000/api/save", this.details)
-      //   .then(
-      //     ({ data }) => {
-      //       alert("Receipt generated.");
-      //     }
-      //   )
+      axios.post("http://localhost:3000/generateReceipt", JSON.stringify(this.details), { headers: { 'Content-Type': 'application/json' } })
+         .then(
+           ({ data }) => {
+                console.log(data.receipt)
+             alert("Receipt generated.");
+           }
+         )
       this.formDisplay = "none";
       this.elementDisplay = "block";
       this.buttonDisplay = "block";
