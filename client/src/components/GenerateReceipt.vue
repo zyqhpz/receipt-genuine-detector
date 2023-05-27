@@ -26,8 +26,8 @@ export default {
       axios.post("http://localhost:3000/generateReceipt", JSON.stringify(this.details), { headers: { 'Content-Type': 'application/json' } })
          .then(
            ({ data }) => {
-                console.log(data.receipt)
-             alert("Receipt generated.");
+              console.log(data.receipt)
+              alert("Receipt generated.");
            }
          )
       this.formDisplay = "none";
@@ -48,6 +48,7 @@ export default {
 </script>
 
 <template>
+  <div>
   <form id="form" :style="{ display: formDisplay }" @submit.prevent="save">
     <h1>Bank Receipt Generation</h1>
     <table>
@@ -112,6 +113,7 @@ export default {
     <p>Note: This is a computer generated receipt and does not require a signature.</p>
   </div>
   <button @click="exportToPDF" class="btn" :style="{ display: buttonDisplay }" style="margin-left: 80px">Export as PDF</button>
+</div>
 </template>
 
 <style></style>
