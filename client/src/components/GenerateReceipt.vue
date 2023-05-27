@@ -1,6 +1,8 @@
 <script>
 import axios from 'axios';
-import html2pdf from "html2pdf.js";
+import pdfMake from 'pdfmake';
+import pdfFonts from 'pdfmake/build/vfs_fonts';
+import htmlToPdfmake from 'html-to-pdfmake';
 
 export default {
   name: 'GenerateReceipt',
@@ -24,12 +26,15 @@ export default {
   methods: {
     save() {
       axios.post("http://localhost:3000/generateReceipt", JSON.stringify(this.details), { headers: { 'Content-Type': 'application/json' } })
-         .then(
-           ({ data }) => {
-                console.log(data.receipt)
-             alert("Receipt generated.");
-           }
-         )
+        .then(
+          ({ data }) => {
+            console.log(data.receipt)
+            alert("Receipt generated.");
+          }
+        )
+      setTimeout({
+
+      }, 2000);
       this.formDisplay = "none";
       this.elementDisplay = "block";
       this.buttonDisplay = "block";
@@ -37,11 +42,15 @@ export default {
     exportToPDF() {
       // axios.get("http://127.0.0.1:8000/api/save")
       //   .then(response => this.details.referenceID = response.data.referenceID);
-      
-      html2pdf(document.getElementById("element-to-convert"), {
-        margin: 1,
-        filename: "Receipt.pdf",
-      });
+
+      //get table html
+      const pdfTable = document.getElementById('element-to-convert');
+      //html to pdf format
+      var html = htmlToPdfmake(pdfTable.innerHTML);
+
+      const documentDefinition = { content: html };
+      pdfMake.vfs = pdfFonts.pdfMake.vfs;
+      pdfMake.createPdf(documentDefinition).open();
     },
   }
 }
@@ -111,7 +120,8 @@ export default {
     <br>
     <p>Note: This is a computer generated receipt and does not require a signature.</p>
   </div>
-  <button @click="exportToPDF" class="btn" :style="{ display: buttonDisplay }" style="margin-left: 80px">Export as PDF</button>
+  <button @click="exportToPDF" class="btn" :style="{ display: buttonDisplay }" style="margin-left: 80px">Export as
+    PDF</button>
 </template>
 
 <style></style>
