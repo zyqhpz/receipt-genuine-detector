@@ -184,6 +184,8 @@ app.post("/upload", upload.array("pdfFiles"), async (req, res) => {
     // Array to store extracted text from each PDF
     const extractedTexts = [];
 
+    const results = [];
+
     // Process each PDF file
     for (const pdfFile of pdfFiles) {
       // Read the PDF file
@@ -198,17 +200,26 @@ app.post("/upload", upload.array("pdfFiles"), async (req, res) => {
       // Extract reference number from the text
       const referenceNumber = extractReferenceNumber(extractedText);
 
+
+
+      const res = {
+        "referenceNumber": referenceNumber,
+        "status": verifyReceipt(referenceNumber) != null ? "valid" : "invalid"
+      }
+
       // Push the reference number to the array
       extractedTexts.push(referenceNumber);
 
-      verifyReceipt("20230528M0000221861OBA85204063");
+      results.push(res)
+      
     }
-    console.log(extractedTexts);
+    // console.log(extractedTexts);
+    console.log(results);
     // Send the extracted text as a response
 
     // run validatorFunction to check if the file is a PDF
 
-    res.json({ extractedTexts });
+    res.json({ results });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Failed to extract text from PDFs" });
@@ -220,7 +231,7 @@ function extractReferenceNumber(text) {
   const regex = /Reference\sNo\.\:\s*(\d\w+)/;
   const match = text.match(regex);
   if (match && match.length > 1) {
-    return verifyReceipt(match[1]);
+    return match[1];
   } else {
     return "N/A";
   }
@@ -242,10 +253,14 @@ function verifyReceipt(referenceID) {
           return result;
         }
       )
-      .catch((error) => console.error(error));
+      .catch((error) => {
+        console.error(error)
+        return null;
+      });
     })
     .catch((error) => {
       console.error("Failed to connect to MongoDB:", error);
+      return null;
     });
   }
 
