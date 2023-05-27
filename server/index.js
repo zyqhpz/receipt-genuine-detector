@@ -1,22 +1,10 @@
-const express = require("express")
-const app = express()
+const express = require("express");
+const app = express();
 app.use(express.json());
 
 const cors = require("cors");
 
 const Model = require("./model.js");
-
-const { MongoClient, ServerApiVersion } = require("mongodb");
-const uri =
-  "mongodb+srv://zyqhpz:LpyaTun3O4AgHXSG@eventeq.obgaljj.mongodb.net/?retryWrites=true&w=majority";
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
-const client = new MongoClient(uri, {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-  },
-});
 
 const mongoose = require("mongoose");
 const multer = require("multer");
@@ -25,9 +13,18 @@ const upload = multer({ dest: "uploads/" });
 const fs = require("fs");
 const PDFParser = require("pdf-parse");
 
-const port = 3000
+const bodyParser = require("body-parser");
 
-app.post('/generateReceipt', async (req, res) => {
+const port = 3000;
+
+
+
+const { MongoClient, ServerApiVersion } = require("mongodb");
+const uri =
+  "mongodb+srv://zyqhpz:LpyaTun3O4AgHXSG@eventeq.obgaljj.mongodb.net/?retryWrites=true&w=majority";
+// Create a MongoClient with a MongoClientOptions object to set the Stable API version
+
+app.post("/generateReceipt", async (req, res) => {
   // Create a new receipt
 
   // get the data in JSON format
@@ -101,20 +98,28 @@ app.post('/generateReceipt', async (req, res) => {
     status: status,
   });
 
-  // Save the receipt data to MongoDB
-  receipt
-    .save()
-    .then((savedReceipt) => {
-      console.log("Receipt saved:", savedReceipt);
-      res.header("Access-Control-Allow-Origin", "http://localhost:5173");
-      res.status(200).json({ receipt: savedReceipt });
+  MongoClient.connect(uri, { useUnifiedTopology: true })
+    .then((client) => {
+      console.log("Connected to MongoDB");
+      const db = client.db("eventeq");
+      const receiptsCollection = db.collection("receipts");
+
+      receiptsCollection
+        .insertOne(receipt)
+        .then((result) => {
+          console.log("Receipt saved:", receipt);
+          res.header(
+            "Access-Control-Allow-Origin",
+            "http://localhost:5173"
+          );
+          res.status(200).json(receipt);
+        })
+        .catch((error) => console.error(error));
     })
     .catch((error) => {
-      console.error("Failed to save receipt:", error);
-      res.header("Access-Control-Allow-Origin", "http://localhost:5173");
-      res.status(500).json({ error: "Failed to save receipt" });
+      console.error("Failed to connect to MongoDB:", error);
     });
-})
+});
 
 /*         
  * POST /readReceipts
@@ -161,17 +166,17 @@ app.post('/generateReceipt', async (req, res) => {
 // Set up Multer for file upload handling
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    const uploadDir = 'uploads';
+    const uploadDir = "uploads";
     fs.mkdirSync(uploadDir, { recursive: true });
     cb(null, uploadDir);
   },
   filename: function (req, file, cb) {
     cb(null, file.originalname);
-  }
+  },
 });
 
 // Define a route to handle PDF uploads
-app.post('/upload', upload.array('pdfFiles'), async (req, res) => {
+app.post("/upload", upload.array("pdfFiles"), async (req, res) => {
   try {
     // Access the uploaded files from the request object
     const pdfFiles = req.files;
@@ -196,12 +201,12 @@ app.post('/upload', upload.array('pdfFiles'), async (req, res) => {
       // Push the reference number to the array
       extractedTexts.push(referenceNumber);
     }
-    console.log(extractedTexts)
+    console.log(extractedTexts);
     // Send the extracted text as a response
     res.json({ extractedTexts });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Failed to extract text from PDFs' });
+    res.status(500).json({ error: "Failed to extract text from PDFs" });
   }
 });
 
@@ -212,7 +217,7 @@ function extractReferenceNumber(text) {
   if (match && match.length > 1) {
     return match[1];
   } else {
-    return 'N/A';
+    return "N/A";
   }
 }
 
@@ -257,7 +262,6 @@ app.post("/upload", upload.single("pdf"), async (req, res) => {
       if (!item || item.page) {
         return;
       }
-
       pages.push(item.text);
     });
 
@@ -272,17 +276,17 @@ app.post("/upload", upload.single("pdf"), async (req, res) => {
 });
 
 app.get("/items", async (req, res) => {
-Item.find()
-  .then((items) => {
-    res.json(items);
-  })
-  .catch((error) => {
-    console.error("Failed to retrieve items:", error);
-    res.status(500).json({ error: "Failed to retrieve items" });
-  });
+  Item.find()
+    .then((items) => {
+      res.json(items);
+    })
+    .catch((error) => {
+      console.error("Failed to retrieve items:", error);
+      res.status(500).json({ error: "Failed to retrieve items" });
+    });
 });
 
 app.use(cors());
 app.listen(port, () => {
-  console.log(`Example app listening on http://localhost:${port}`)
-})
+  console.log(`Example app listening on http://localhost:${port}`);
+});
