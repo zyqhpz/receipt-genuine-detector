@@ -78,7 +78,7 @@ app.post("/generateReceipt", async (req, res) => {
 
   var status = "";
 
-  if (req.transactionType == "Instant") {
+  if (req.transactionType == "Instant Transfer") {
     status = "success";
   } else {
     status = "pending";

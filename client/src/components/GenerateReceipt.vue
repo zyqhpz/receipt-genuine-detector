@@ -14,8 +14,10 @@ export default {
         amount: '',
         ref1: '',
         ref2: '',
-        referenceID: ''
+        referenceID: '',
+        date: ''
       },
+      response: {},
       elementDisplay: "none",
       formDisplay: "block",
       buttonDisplay: "none"
@@ -26,13 +28,23 @@ export default {
       axios.post("http://localhost:3000/generateReceipt", JSON.stringify(this.details), { headers: { 'Content-Type': 'application/json' } })
          .then(
            ({ data }) => {
-              console.log(data.receipt)
+              console.log(data);
+              this.response = data;
               alert("Receipt generated.");
+              // delay 2 seconds
+              setInterval(() => {
+              }, 1000);
+              this.formDisplay = "none";
+              this.elementDisplay = "block";
+              this.buttonDisplay = "block";
            }
          )
-      this.formDisplay = "none";
-      this.elementDisplay = "block";
-      this.buttonDisplay = "block";
+         .catch(
+           error => {
+             console.log(error);
+             alert("Error: Receipt not generated.");
+           }
+         );
     },
     exportToPDF() {
       // axios.get("http://127.0.0.1:8000/api/save")
@@ -98,9 +110,9 @@ export default {
   <div id="element-to-convert" :style="{ display: elementDisplay }" style="margin: 20px 80px">
     <h3>RV Bank Receipt</h3>
     <hr>
-    <p><strong>Reference No.:</strong> </p>
+    <p><strong>Reference No.:</strong> {{ response.referenceId }}</p>
     <p><strong>Transaction Status:</strong> Successful</p>
-    <p><strong>Transaction DateTime:</strong> </p>
+    <p><strong>Transaction DateTime:</strong> {{ response.date }}</p>
     <p><strong>From Account:</strong> {{ details.senderNoAccount }}</p>
     <p><strong>Amount:</strong> RM {{ details.amount }}</p>
     <br>
