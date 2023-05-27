@@ -200,9 +200,14 @@ app.post("/upload", upload.array("pdfFiles"), async (req, res) => {
 
       // Push the reference number to the array
       extractedTexts.push(referenceNumber);
+
+      verifyReceipt("20230528M0000221861OBA85204063");
     }
     console.log(extractedTexts);
     // Send the extracted text as a response
+
+    // run validatorFunction to check if the file is a PDF
+
     res.json({ extractedTexts });
   } catch (error) {
     console.error(error);
@@ -212,14 +217,37 @@ app.post("/upload", upload.array("pdfFiles"), async (req, res) => {
 
 // Function to extract reference number from text
 function extractReferenceNumber(text) {
-  const regex = /Reference\sNo\.\s*(\d+)/i;
+  const regex = /Reference\sNo\.\:\s*(\d\w+)/;
   const match = text.match(regex);
   if (match && match.length > 1) {
-    return match[1];
+    return verifyReceipt(match[1]);
   } else {
     return "N/A";
   }
 }
+
+function verifyReceipt(referenceID) {
+  MongoClient.connect(uri, { useUnifiedTopology: true })
+    .then((client) => {
+      const db = client.db("eventeq");
+      const receiptsCollection = db.collection("receipts");
+
+      receiptsCollection
+        .findOne({ referenceId: referenceID })
+
+        .then((result) => {
+          // remove _id from the result
+          delete result._id;
+          console.log("Receipt found:", result);
+          return result;
+        }
+      )
+      .catch((error) => console.error(error));
+    })
+    .catch((error) => {
+      console.error("Failed to connect to MongoDB:", error);
+    });
+  }
 
 /**
  * validatorFunction to check if the file is a PDF
@@ -233,6 +261,15 @@ const validatorFunction = (req, file, cb) => {
 
   cb(null, true);
 };
+
+app.post("/test", upload.single("pdf"), async (req, res) => {
+  if (!req.file) {
+    res.status(400).json({ error: "No file uploaded" });
+    return;
+  } else {
+    res.status(200).json({ message: "File uploaded successfully" });
+  }
+});
 
 app.post("/upload", upload.single("pdf"), async (req, res) => {
   if (!req.file) {
