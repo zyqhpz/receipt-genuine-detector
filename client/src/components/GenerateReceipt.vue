@@ -32,7 +32,7 @@ export default {
 
 <template>
   <div>
-    <h1>Bank Receipt Generation</h1>
+    <h1>Online Bank Transfer Receipt Generator </h1>
 
     <form @submit.prevent="save">
       <p>From Account: <input v-model="details.senderNoAccount" /></p>
