@@ -22,44 +22,10 @@ const mongoose = require("mongoose");
 const multer = require("multer");
 const upload = multer({ dest: "uploads/" });
 
-// const pdfReader = require("pdfreader");
-
-// import { pdfReader } from "pdfreader";
-
-// const db = require("./db.mjs");
+const fs = require("fs");
+const PDFParser = require("pdf-parse");
 
 const port = 3000
-
-// Connect to MongoDB
-mongoose
-  .connect(
-    "mongodb+srv://zyqhpz:LpyaTun3O4AgHXSG@eventeq.obgaljj.mongodb.net/",
-    {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    }
-  )
-  .then(() => {
-    console.log("Connected to MongoDB");
-  })
-  .catch((error) => {
-    console.error("Failed to connect to MongoDB", error);
-  });
-
-const database = mongoose.connection;
-
-// const mongoose = require("mongoose");
-
-const itemSchema = new mongoose.Schema({
-  // Define the schema fields according to your "items" collection
-  // For example:
-  name: String,
-  description: String,
-  price: Number,
-}, { collection: "items" });
-
-const Item = mongoose.model("Item", itemSchema, "items");
-
 
 app.post('/generateReceipt', async (req, res) => {
   // Create a new receipt
@@ -148,32 +114,6 @@ app.post('/generateReceipt', async (req, res) => {
       res.header("Access-Control-Allow-Origin", "http://localhost:5173");
       res.status(500).json({ error: "Failed to save receipt" });
     });
-    
-
-
-  // Create a new instance of the Receipt model
-  // const receipt = new Receipt(receiptData);
-
-      
-  
-
-
-  // // Save the receipt data to MongoDB
-  // receipt
-  //   .save()
-  //   .then((savedReceipt) => {
-  //     console.log("Receipt saved:", savedReceipt);
-  //     res.header("Access-Control-Allow-Origin", "http://localhost:5173");
-  //     res.status(200).json({ receipt: savedReceipt });
-  //   })
-  //   .catch((error) => {
-  //     console.error("Failed to save receipt:", error);
-  //     res.header("Access-Control-Allow-Origin", "http://localhost:5173");
-  //     res.status(500).json({ error: "Failed to save receipt" });
-  //   });
-
-  // // Return the new receipt
-  // res.status(200).json({ receipt });
 })
 
 /*         
@@ -217,6 +157,64 @@ app.post('/generateReceipt', async (req, res) => {
 //       res.status(200).json({ pages });
 //     });
 // })
+
+// Set up Multer for file upload handling
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = 'uploads';
+    fs.mkdirSync(uploadDir, { recursive: true });
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    cb(null, file.originalname);
+  }
+});
+
+// Define a route to handle PDF uploads
+app.post('/upload', upload.array('pdfFiles'), async (req, res) => {
+  try {
+    // Access the uploaded files from the request object
+    const pdfFiles = req.files;
+
+    // Array to store extracted text from each PDF
+    const extractedTexts = [];
+
+    // Process each PDF file
+    for (const pdfFile of pdfFiles) {
+      // Read the PDF file
+      const dataBuffer = fs.readFileSync(pdfFile.path);
+
+      // Convert PDF data to text using pdf-parse
+      const pdfText = await PDFParser(dataBuffer);
+
+      // Extracted text from the PDF
+      const extractedText = pdfText.text;
+
+      // Extract reference number from the text
+      const referenceNumber = extractReferenceNumber(extractedText);
+
+      // Push the reference number to the array
+      extractedTexts.push(referenceNumber);
+    }
+    console.log(extractedTexts)
+    // Send the extracted text as a response
+    res.json({ extractedTexts });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to extract text from PDFs' });
+  }
+});
+
+// Function to extract reference number from text
+function extractReferenceNumber(text) {
+  const regex = /Reference\sNo\.\s*(\d+)/i;
+  const match = text.match(regex);
+  if (match && match.length > 1) {
+    return match[1];
+  } else {
+    return 'N/A';
+  }
+}
 
 /**
  * validatorFunction to check if the file is a PDF
