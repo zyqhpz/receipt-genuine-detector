@@ -200,11 +200,15 @@ app.post("/upload", upload.array("pdfFiles"), async (req, res) => {
       // Extract reference number from the text
       const referenceNumber = extractReferenceNumber(extractedText);
 
+      // console.log("this is ref: ", verifyReceipt(referenceNumber));
 
+      // if (verifyReceipt(referenceNumber) != null) {
+      //   console.log("this is ref: ", verifyReceipt(referenceNumber));
+      // }
 
       const res = {
         "referenceNumber": referenceNumber,
-        "status": verifyReceipt(referenceNumber) != null ? "valid" : "invalid"
+        "status": await verifyReceipt(referenceNumber) != null ? "valid" : "invalid"
       }
 
       // Push the reference number to the array
@@ -218,7 +222,6 @@ app.post("/upload", upload.array("pdfFiles"), async (req, res) => {
     // Send the extracted text as a response
 
     // run validatorFunction to check if the file is a PDF
-
     res.json({ results });
   } catch (error) {
     console.error(error);
@@ -237,32 +240,28 @@ function extractReferenceNumber(text) {
   }
 }
 
-function verifyReceipt(referenceID) {
-  MongoClient.connect(uri, { useUnifiedTopology: true })
-    .then((client) => {
-      const db = client.db("eventeq");
-      const receiptsCollection = db.collection("receipts");
+async function verifyReceipt(referenceID) {
+  try {
+    const client = await MongoClient.connect(uri, { useUnifiedTopology: true });
+    const db = client.db("eventeq");
+    const receiptsCollection = db.collection("receipts");
 
-      receiptsCollection
-        .findOne({ referenceId: referenceID })
-
-        .then((result) => {
-          // remove _id from the result
-          delete result._id;
-          console.log("Receipt found:", result);
-          return result;
-        }
-      )
-      .catch((error) => {
-        console.error(error)
-        return null;
-      });
-    })
-    .catch((error) => {
-      console.error("Failed to connect to MongoDB:", error);
-      return null;
+    const result = await receiptsCollection.findOne({
+      referenceId: referenceID,
     });
+    if (result) {
+      delete result._id;
+      console.log("Receipt found:", result);
+      return result;
+    } else {
+      console.log("Receipt not found.");
+      return null;
+    }
+  } catch (error) {
+    console.error("Failed to connect to MongoDB:", error);
+    return null;
   }
+}
 
 /**
  * validatorFunction to check if the file is a PDF
