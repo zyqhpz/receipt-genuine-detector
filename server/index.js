@@ -206,10 +206,13 @@ app.post("/upload", upload.array("pdfFiles"), async (req, res) => {
       //   console.log("this is ref: ", verifyReceipt(referenceNumber));
       // }
 
+      var extractedAmount = extractAmount(extractedText);
+
       const res = {
         "referenceNumber": referenceNumber,
-        "status": await verifyReceipt(referenceNumber) != null ? "valid" : "invalid"
+        "status": await verifyReceipt(referenceNumber, extractedAmount) != null ? "valid" : "invalid"
       }
+
 
       // Push the reference number to the array
       extractedTexts.push(referenceNumber);
@@ -240,7 +243,17 @@ function extractReferenceNumber(text) {
   }
 }
 
-async function verifyReceipt(referenceID) {
+function extractAmount(text) {
+  const regex = /Amount\:\sRM\s(\d+)/;
+  const match = text.match(regex);
+  if (match && match.length > 1) {
+    return match[1];
+  } else {
+    return "N/A";
+  }
+}
+
+async function verifyReceipt(referenceID, extractedAmount) {
   try {
     const client = await MongoClient.connect(uri, { useUnifiedTopology: true });
     const db = client.db("eventeq");
@@ -252,7 +265,13 @@ async function verifyReceipt(referenceID) {
     if (result) {
       delete result._id;
       console.log("Receipt found:", result);
-      return result;
+      if (result.amount == extractedAmount) {
+        console.log("Amount matched");
+        return result;
+      } else {
+        console.log("Amount not matched");
+        return null;
+      }
     } else {
       console.log("Receipt not found.");
       return null;
