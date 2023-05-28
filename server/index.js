@@ -78,7 +78,7 @@ app.post("/generateReceipt", async (req, res) => {
 
   var status = "";
 
-  if (req.transactionType == "Instant") {
+  if (req.transactionType == "Instant Transfer") {
     status = "success";
   } else {
     status = "pending";
@@ -184,6 +184,8 @@ app.post("/upload", upload.array("pdfFiles"), async (req, res) => {
     // Array to store extracted text from each PDF
     const extractedTexts = [];
 
+    const results = [];
+
     // Process each PDF file
     for (const pdfFile of pdfFiles) {
       // Read the PDF file
@@ -198,12 +200,29 @@ app.post("/upload", upload.array("pdfFiles"), async (req, res) => {
       // Extract reference number from the text
       const referenceNumber = extractReferenceNumber(extractedText);
 
+      // console.log("this is ref: ", verifyReceipt(referenceNumber));
+
+      // if (verifyReceipt(referenceNumber) != null) {
+      //   console.log("this is ref: ", verifyReceipt(referenceNumber));
+      // }
+
+      const res = {
+        "referenceNumber": referenceNumber,
+        "status": await verifyReceipt(referenceNumber) != null ? "valid" : "invalid"
+      }
+
       // Push the reference number to the array
       extractedTexts.push(referenceNumber);
+
+      results.push(res)
+      
     }
-    console.log(extractedTexts);
+    // console.log(extractedTexts);
+    console.log(results);
     // Send the extracted text as a response
-    res.json({ extractedTexts });
+
+    // run validatorFunction to check if the file is a PDF
+    res.json({ results });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Failed to extract text from PDFs" });
@@ -212,12 +231,35 @@ app.post("/upload", upload.array("pdfFiles"), async (req, res) => {
 
 // Function to extract reference number from text
 function extractReferenceNumber(text) {
-  const regex = /Reference\sNo\.\s*(\d+)/i;
+  const regex = /Reference\sNo\.\:\s*(\d\w+)/;
   const match = text.match(regex);
   if (match && match.length > 1) {
     return match[1];
   } else {
     return "N/A";
+  }
+}
+
+async function verifyReceipt(referenceID) {
+  try {
+    const client = await MongoClient.connect(uri, { useUnifiedTopology: true });
+    const db = client.db("eventeq");
+    const receiptsCollection = db.collection("receipts");
+
+    const result = await receiptsCollection.findOne({
+      referenceId: referenceID,
+    });
+    if (result) {
+      delete result._id;
+      console.log("Receipt found:", result);
+      return result;
+    } else {
+      console.log("Receipt not found.");
+      return null;
+    }
+  } catch (error) {
+    console.error("Failed to connect to MongoDB:", error);
+    return null;
   }
 }
 
@@ -233,6 +275,15 @@ const validatorFunction = (req, file, cb) => {
 
   cb(null, true);
 };
+
+app.post("/test", upload.single("pdf"), async (req, res) => {
+  if (!req.file) {
+    res.status(400).json({ error: "No file uploaded" });
+    return;
+  } else {
+    res.status(200).json({ message: "File uploaded successfully" });
+  }
+});
 
 app.post("/upload", upload.single("pdf"), async (req, res) => {
   if (!req.file) {
